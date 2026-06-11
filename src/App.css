@@ -420,3 +420,57 @@
 
 /* ───────── フッター ───────── */
 .footer { text-align: center; font-size: 0.8rem; color: #888; padding: 24px; }
+
+/* ═════════ モバイル対応 ═════════ */
+@media (max-width: 768px) {
+  /* ヘッダー・目次・フッターを非表示 */
+  .hero, .toc, .footer, .uploader, .catalog--book > .book__editbanner { display: none !important; }
+
+  /* ブック全体をフル幅に */
+  .catalog--book { padding: 0; }
+  .book { gap: 0; }
+  .book__stage { gap: 0; }
+
+  /* 見開き→1ページ表示 */
+  .book__spread { flex-direction: column; box-shadow: none; width: 100vw; }
+
+  /* ページ幅をフル幅に */
+  .page {
+    width: 100vw;
+    font-size: clamp(9px, 2.2vw, 13px);
+  }
+
+  /* タブ・サイドタブを非表示 */
+  .page__tab { display: none; }
+  .page__sidetabs { display: none; }
+
+  /* bodyのpadding調整(タブ分) */
+  .page__body { padding: 0.4em 0.8em; }
+  .page__band { padding: 0.45em 0.8em; }
+  .page__footer { padding: 0.3em 0.8em 0.7em; }
+
+  /* ツールバーをコンパクトに */
+  .book__toolbar { padding: 6px 8px; gap: 4px; }
+  .book__search { display: none; }
+  .book__pageinput { font-size: 0.8rem; }
+  .book__tbtn { width: 30px; height: 30px; font-size: 0.8rem; }
+  .book__arrow { font-size: 1.4rem; padding: 4px; }
+
+  /* 代替品モーダルをフル幅に */
+  .altmodal { padding: 14px 12px; max-height: 90vh; }
+  .altmodal__grid { grid-template-columns: 1fr; }
+}
+
+/* 横向き専用: 見開き2ページ表示を維持 */
+@media (max-width: 768px) and (orientation: landscape) {
+  .book__spread { flex-direction: row; }
+  .page {
+    width: 50vw;
+    font-size: clamp(7px, 1.5vw, 11px);
+  }
+  .page__tab { display: block; }
+  .page__sidetabs { display: flex; }
+  .page__body { padding: 0.4em 3.2em; }
+  .page__band { padding: 0.45em 3.4em 0.45em 2.2em; }
+  .page__footer { padding: 0.3em 3.2em 0.7em; }
+}
