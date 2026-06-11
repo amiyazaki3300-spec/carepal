@@ -1,0 +1,24 @@
+/* ケアパル ベーススタイル — 大人かわいいテイスト */
+:root {
+  --pink: #e88aa8;
+  --pink-light: #fde2ea;
+  --navy: #2b3a67;
+  --aqua: #7fc2e0;
+  --aqua-light: #cdeaf7;
+  --cream: #fffaf5;
+  --text: #3a3a44;
+  --radius: 14px;
+  --shadow: 0 4px 14px rgba(43, 58, 103, 0.1);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Meiryo', sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+a { color: var(--navy); }
