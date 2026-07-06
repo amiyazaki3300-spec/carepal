@@ -42,3 +42,20 @@ export interface Product {
 }
 
 export type StockMap = Record<string, number>;
+
+/** 商品ごとの在庫内訳 */
+export interface StockDetail {
+  available: number;   // L: 引当可（倉庫から出庫可能）
+  reserved: number;    // M: 予約数
+  renting: number;     // N: 契約中（レンタル中）
+  cancelled: number;   // O: 解約済
+  recovering: number;  // P: 回収済（消毒前）
+  maintenance: number; // Q: メンテ中
+  total: number;       // S: 在庫数（全体）
+  unusable: number;    // U: 使用不可
+}
+
+export type StockDetailMap = Record<string, StockDetail>;
+
+/** 事業所名 → (TAISコード → 単位数) */
+export type OfficeRateMap = Record<string, Record<string, number>>;

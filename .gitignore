@@ -29,3 +29,5 @@ dist-ssr
 # 在庫データ(社内情報のためGitHubには含めない)
 public/stock.xlsx
 sample-stock.xlsx
+
+.vercel

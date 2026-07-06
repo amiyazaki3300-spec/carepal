@@ -140,6 +140,42 @@ export const PRODUCTS: Product[] = [
     description: '静止型の体圧分散マットレス。端座位も安定。',
     tags: ['静止型', '褥瘡予防', '体圧分散'],
   },
+  {
+    id: 'AP-003', name: 'ネクサスR', maker: 'モルテン', categoryId: 'tokozure',
+    taisCode: '00920-003555', price: 9000, featured: true, firmness: 1,
+    description: '圧切替型エアマットレス。全身の体圧を自動分散。ソフト/ハード切替可。',
+    tags: ['圧切替型', 'エアマットレス', '褥瘡予防'],
+  },
+  {
+    id: 'AP-004', name: 'ラグーナ', maker: 'ケープ', categoryId: 'tokozure',
+    taisCode: '00930-003666', price: 10000, featured: false, firmness: 1,
+    description: '体位変換機能付き圧切替型エアマットレス。傾斜角20°まで対応。',
+    tags: ['圧切替型', 'エアマットレス', '体位変換', '褥瘡予防'],
+  },
+  {
+    id: 'AP-005', name: 'ピタ・ソフトエア', maker: 'モルテン', categoryId: 'tokozure',
+    taisCode: '00940-003777', price: 7500, featured: false, firmness: 1,
+    description: '静音設計の圧切替型エアマットレス。コンパクトで操作が簡単。',
+    tags: ['圧切替型', 'エアマットレス', '静音'],
+  },
+  {
+    id: 'AP-006', name: 'ナーセントコンタ', maker: 'アイ・ソネックス', categoryId: 'tokozure',
+    taisCode: '00950-003888', price: 5500, featured: false, firmness: 2,
+    description: '静止型エアマットレス。立体形状セルで体圧を効果的に分散。',
+    tags: ['静止型', 'エアマットレス', '褥瘡予防'],
+  },
+  {
+    id: 'AP-007', name: 'アクアフロート', maker: 'タイカ', categoryId: 'tokozure',
+    taisCode: '00960-003999', price: 4500, featured: false, firmness: 3,
+    description: '静止型体圧分散マットレス。軽量で扱いやすく低〜中リスク向け。',
+    tags: ['静止型', 'マットレス', '褥瘡予防'],
+  },
+  {
+    id: 'AP-008', name: 'ゼロソア', maker: 'ケープ', categoryId: 'tokozure',
+    taisCode: '00970-004000', price: 3500, featured: false, firmness: 3,
+    description: '静止型ウレタンマットレス。褥瘡予防〜ステージI向け入門モデル。',
+    tags: ['静止型', 'マットレス', '予防'],
+  },
   // ── 体位変換器 ──
   {
     id: 'PC-001', name: 'ナーセントパット A', maker: 'アイ・ソネックス', categoryId: 'taii-henkan',
