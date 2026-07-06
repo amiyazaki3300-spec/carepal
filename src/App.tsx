@@ -13,7 +13,7 @@ import { loadDefaultCatalog, loadDefaultRates, parseCatalogExcel, parseRateExcel
 import { fileToDataUrl } from './utils/coverUpload';
 import { exportCatalogPdf } from './utils/pdf';
 import { loadTaisDetails, type TaisDetailMap } from './utils/taisDetails';
-import { loadOverrides, saveOverrides, mergeOverrides, type Overrides, type ExtraProduct } from './utils/overrides';
+import { loadOverrides, saveOverrides, mergeOverrides, isEmptyOverrides, type Overrides, type ExtraProduct } from './utils/overrides';
 import { taisPhotoUrl, taisDetailUrl } from './utils/tais';
 import { suggestAlternatives } from './utils/alternatives';
 import { supabaseEnabled, saveCatalogToSupabase, loadCatalogFromSupabase, loadCatalogProducts, saveSetting, loadAllSettings } from './lib/supabase';
@@ -1020,6 +1020,8 @@ export default function App() {
 
   const syncOverridesToCloud = (next: Overrides) => {
     if (!supabaseEnabled) return;
+    // 空データはクラウドへ同期しない（Cookie削除直後の端末がクラウドを空で上書きする事故防止）
+    if (isEmptyOverrides(next)) return;
     clearTimeout(syncTimer.current);
     setSyncStatus('syncing');
     // 即時同期（debounceなし）でSupabaseに保存（最新タイムスタンプを必ず付ける）
@@ -1065,7 +1067,9 @@ export default function App() {
     const payload = { ...latest, _savedAt: Date.now() };
     setSyncStatus('syncing');
     void (async () => {
-      const cloudOk = supabaseEnabled ? await saveSetting('overrides', payload) : false;
+      // 空データでクラウドを上書きしない（誤消去防止。意図的な全消去はサポートに相談）
+      const skipCloud = isEmptyOverrides(payload);
+      const cloudOk = supabaseEnabled && !skipCloud ? await saveSetting('overrides', payload) : false;
       // 日次バックアップ（同日中は上書き）— 誤保存やデータ消失時の復元ポイントになる
       if (cloudOk) {
         const day = new Date().toISOString().slice(0, 10);

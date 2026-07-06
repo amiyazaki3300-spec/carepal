@@ -125,15 +125,46 @@ export function saveOverrides(o: Overrides): boolean {
   }
 }
 
+/** 編集内容が実質空かどうか（Cookie削除直後の初期状態など） */
+export function isEmptyOverrides(o: Overrides): boolean {
+  const count = (x: object | undefined | null) => Object.keys(x ?? {}).length;
+  return (
+    count(o.products) === 0 &&
+    count(o.guides) === 0 &&
+    count(o.layouts) === 0 &&
+    count(o.customImages) === 0 &&
+    count(o.cardOrder) === 0 &&
+    count(o.cardSize) === 0 &&
+    count(o.altSettings) === 0 &&
+    count(o.pageRows) === 0 &&
+    count(o.pressureUlcerSpecs) === 0 &&
+    (o.catalogProductIds?.length ?? 0) === 0 &&
+    (o.extraProducts?.length ?? 0) === 0 &&
+    (o.hiddenProductIds?.length ?? 0) === 0 &&
+    !o.coverImage &&
+    !o.backCoverImage
+  );
+}
+
 /**
  * ローカルとリモートのどちらが新しいか比較し、新しい方を返す。
  * タイムスタンプが同じまたはリモートが新しい場合はリモートを採用。
+ * ただし「空のデータ」はタイムスタンプに関係なく「中身のあるデータ」に負ける
+ * （Cookie削除直後の端末が空データでクラウドや他端末を上書きする事故を防ぐ）。
  */
 export function mergeOverrides(local: Overrides, remote: Overrides): { winner: Overrides; source: 'local' | 'remote' } {
+  const nRemote = normalize(remote);
+  const localEmpty = isEmptyOverrides(local);
+  const remoteEmpty = isEmptyOverrides(nRemote);
+  if (localEmpty !== remoteEmpty) {
+    return localEmpty
+      ? { winner: nRemote, source: 'remote' }
+      : { winner: local, source: 'local' };
+  }
   const localTs = local._savedAt ?? 0;
   const remoteTs = remote._savedAt ?? 0;
   if (localTs > remoteTs) {
     return { winner: local, source: 'local' };
   }
-  return { winner: normalize(remote), source: 'remote' };
+  return { winner: nRemote, source: 'remote' };
 }
