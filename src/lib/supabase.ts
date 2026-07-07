@@ -51,6 +51,22 @@ export async function loadAllSettings(): Promise<Record<string, unknown> | null>
   return Object.fromEntries((data as { key: string; value: unknown }[]).map(r => [r.key, r.value]));
 }
 
+/** クラウド日次バックアップ(overrides_backup_YYYY-MM-DD)の一覧を新しい順に取得 */
+export async function listOverrideBackups(): Promise<{ day: string; updatedAt: string }[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from('settings')
+    .select('key, updated_at')
+    .like('key', 'overrides_backup_%')
+    .order('key', { ascending: false });
+  if (error || !data) return [];
+  return (data as { key: string; updated_at: string }[]).map((r) => ({
+    day: r.key.replace('overrides_backup_', ''),
+    updatedAt: r.updated_at,
+  }));
+}
+
 // ── products テーブル ──
 
 interface ProductRow {

@@ -16,7 +16,7 @@ import { loadTaisDetails, type TaisDetailMap } from './utils/taisDetails';
 import { loadOverrides, saveOverrides, mergeOverrides, isEmptyOverrides, type Overrides, type ExtraProduct } from './utils/overrides';
 import { taisPhotoUrl, taisDetailUrl } from './utils/tais';
 import { suggestAlternatives } from './utils/alternatives';
-import { supabaseEnabled, saveCatalogToSupabase, loadCatalogFromSupabase, loadCatalogProducts, saveSetting, loadAllSettings } from './lib/supabase';
+import { supabaseEnabled, saveCatalogToSupabase, loadCatalogFromSupabase, loadCatalogProducts, saveSetting, loadSetting, loadAllSettings, listOverrideBackups } from './lib/supabase';
 import type { CategoryId, OfficeRateMap, Product } from './types';
 import { CategorySection } from './components/CategorySection';
 import { CatalogBook } from './components/CatalogBook';
@@ -345,6 +345,71 @@ function ResetConfirmButton({ onConfirm }: { onConfirm: () => Promise<void> }) {
   return <p style={{ fontSize: '0.85rem', color: '#888' }}>リセット中…</p>;
 }
 
+// ── クラウド日次バックアップ一覧・復元 ──────────────────
+function CloudBackupSection({
+  onOverride, onClose,
+}: {
+  onOverride: (u: (o: Overrides) => Overrides) => void;
+  onClose: () => void;
+}) {
+  const [backups, setBackups] = useState<{ day: string; updatedAt: string }[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [restoring, setRestoring] = useState<string | null>(null);
+
+  const loadList = async () => {
+    setLoading(true);
+    try {
+      setBackups(await listOverrideBackups());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const restore = async (day: string) => {
+    if (!confirm(`${day} 時点のクラウドバックアップに復元します。現在の編集内容は上書きされます。よろしいですか？`)) return;
+    setRestoring(day);
+    try {
+      const data = await loadSetting<Overrides>(`overrides_backup_${day}`);
+      if (!data) {
+        alert('バックアップの読み込みに失敗しました。');
+        return;
+      }
+      onOverride(() => ({ ...data, _savedAt: Date.now() }));
+      alert(`${day} 時点のバックアップに復元しました。`);
+      onClose();
+    } finally {
+      setRestoring(null);
+    }
+  };
+
+  return (
+    <section className="adminmodal__section">
+      <h4><Cloud size={14} style={{verticalAlign:'middle',marginRight:4}}/>クラウド日次バックアップ</h4>
+      <p className="adminmodal__note">保存するたびにクラウド側へ日付ごとの復元ポイントが自動で残ります。誤って上書きした場合はここから過去の状態に戻せます。</p>
+      <button className="tb__btn tb__btn--primary" onClick={loadList} disabled={loading}>
+        {loading ? <><Loader2 size={13} style={{verticalAlign:'middle',marginRight:3}}/>読み込み中…</> : '一覧を表示'}
+      </button>
+      {backups !== null && (
+        backups.length === 0 ? (
+          <p className="adminmodal__note" style={{ marginTop: 8 }}>クラウドバックアップはまだありません。</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {backups.map((b) => (
+              <li key={b.day} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ fontSize: '0.82rem' }}>{b.day}</span>
+                <button className="tb__btn" style={{ fontSize: '0.78rem', padding: '3px 10px' }}
+                  onClick={() => void restore(b.day)} disabled={restoring !== null}>
+                  {restoring === b.day ? <Loader2 size={13} style={{verticalAlign:'middle'}}/> : 'この日に復元'}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )
+      )}
+    </section>
+  );
+}
+
 // ── 管理者設定モーダル ────────────────────────────────
 function AdminModal({
   onClose, onExcelLoad, onInitialExcelLoad, onRateLoad, onSaveSupabase, onReloadFromSupabase,
@@ -626,6 +691,7 @@ function AdminModal({
                   }
                 }} />
             </section>
+            {supabaseEnabled && <CloudBackupSection onOverride={onOverride} onClose={onClose} />}
             <section className="adminmodal__section">
               <h4><Pencil size={14} style={{verticalAlign:'middle',marginRight:4}}/>編集モード</h4>
               <p className="adminmodal__note">編集モードはツールバー下部のボタンから操作してください。保存ボタンを押すまで変更は反映されません。</p>
