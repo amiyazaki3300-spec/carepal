@@ -914,20 +914,33 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
   const [cloudDown, setCloudDown] = useState(false); // Supabase接続不可フラグ
 
-  // ─── 起動時に全クラウドデータをロード（ログイン画面表示前） ────────────
+  // ─── 起動時のクラウド読込 ──────────────────────────────
+  // ログイン画面の表示は「利用者パスワード」1件の取得だけを待つ(軽量・高速)。
+  // overrides(画像を含み数MBになりうる)やカタログは、ログイン画面をブロックせず
+  // バックグラウンドで気長に読み込む。タイムアウトでの早期失敗判定はしない —
+  // 「遅い」は「未接続」ではない。実際にリクエストが失敗した場合のみ警告を出す。
   useEffect(() => {
     void (async () => {
       if (supabaseEnabled) {
         try {
-          // 全設定を一括取得（5秒でタイムアウト — Supabase停止中でも起動をブロックしない）
-          const allSettings = await Promise.race([
-            loadAllSettings(),
-            new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
-          ]);
-          if (allSettings === null) throw new Error('supabase unreachable');
+          const pw = await loadSetting<string>('user_pw');
+          if (pw) localStorage.setItem(USER_PW_KEY, pw);
+        } catch { /* パスワード取得失敗時はローカル保存済みの値 or 既定値を使う */ }
+      }
 
-          // パスワード
-          if (allSettings?.user_pw) localStorage.setItem(USER_PW_KEY, allSettings.user_pw as string);
+      // Supabaseがない or ローカルに単位数データが無ければローカルデータで補完
+      if (Object.keys(loadStoredRates()).length === 0) {
+        const rates = await loadDefaultRates();
+        if (rates) { saveStoredRates(rates); setOfficeRateMap(rates); }
+      }
+
+      setAppReady(true); // パスワード取得完了でログイン画面を即表示
+
+      if (supabaseEnabled) {
+        try {
+          // 全設定を一括取得(overridesに画像が含まれ数MBになることがあり、数十秒かかる場合がある)
+          const allSettings = await loadAllSettings();
+          if (allSettings === null) throw new Error('supabase unreachable');
 
           // AI キー
           if (allSettings?.ai_key) localStorage.setItem('carepal-ai-key', allSettings.ai_key as string);
@@ -957,7 +970,7 @@ export default function App() {
             }
           }
 
-          // カタログはバックグラウンドでロード（ログイン画面表示をブロックしない）
+          // カタログはさらにバックグラウンドでロード
           const stockDetail = allSettings?.stock_detail ?? null;
           const loadedAt = allSettings?.catalog_loaded_at ?? null;
           void loadCatalogProducts(
@@ -972,19 +985,11 @@ export default function App() {
           }).catch(() => {});
 
         } catch {
-          // Supabase障害時はlocalStorageにフォールバック + 明確に警告
+          // 実際に取得に失敗した場合のみ警告（低速なだけでは発火しない）
           setCloudDown(true);
           setNotice('⚠ クラウド(Supabase)に接続できません。保存はこの端末のみに残ります。管理者はSupabaseプロジェクトの状態を確認してください。');
         }
       }
-
-      // Supabaseがない or 失敗した場合はローカルデータで補完
-      if (Object.keys(loadStoredRates()).length === 0) {
-        const rates = await loadDefaultRates();
-        if (rates) { saveStoredRates(rates); setOfficeRateMap(rates); }
-      }
-
-      setAppReady(true); // 設定取得完了でログイン画面を即表示
     })();
     void loadTaisDetails().then(setDetails);
   }, []);
