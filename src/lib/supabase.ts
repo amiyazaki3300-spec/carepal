@@ -19,6 +19,43 @@ export function getSupabase(): SupabaseClient | null {
 
 export const supabaseEnabled = Boolean(url && anonKey);
 
+// ── Storage（画像） ──────────────────────────────────────────────────────
+
+const IMAGE_BUCKET = 'carepal-images';
+
+/** data:URL(base64)からMIMEタイプと拡張子を推定 */
+function extFromDataUrl(dataUrl: string): string {
+  const m = /^data:image\/(\w+);/.exec(dataUrl);
+  const type = m?.[1] ?? 'png';
+  return type === 'jpeg' ? 'jpg' : type;
+}
+
+/** data:URL(base64)をSupabase Storageにアップロードし、公開URLを返す。失敗時はnull。 */
+export async function uploadImageDataUrl(dataUrl: string, path: string): Promise<string | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  if (!dataUrl.startsWith('data:')) return dataUrl; // 既にURLならそのまま
+  try {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const ext = extFromDataUrl(dataUrl);
+    const fullPath = `${path}.${ext}`;
+    const { error } = await sb.storage.from(IMAGE_BUCKET).upload(fullPath, blob, {
+      contentType: blob.type || `image/${ext}`,
+      upsert: true,
+    });
+    if (error) {
+      console.error('[uploadImageDataUrl] アップロード失敗:', fullPath, error.message);
+      return null;
+    }
+    const { data } = sb.storage.from(IMAGE_BUCKET).getPublicUrl(fullPath);
+    return data.publicUrl;
+  } catch (e) {
+    console.error('[uploadImageDataUrl] 例外:', e);
+    return null;
+  }
+}
+
 // ── settings テーブル (key TEXT PK, value JSONB, updated_at TIMESTAMPTZ) ──
 
 /** 設定値を1件保存。成功したら true、失敗(またはSupabase未設定)なら false。 */

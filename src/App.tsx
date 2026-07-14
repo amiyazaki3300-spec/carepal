@@ -14,6 +14,7 @@ import { fileToDataUrl } from './utils/coverUpload';
 import { exportCatalogPdf } from './utils/pdf';
 import { loadTaisDetails, type TaisDetailMap } from './utils/taisDetails';
 import { loadOverrides, saveOverrides, mergeOverrides, isEmptyOverrides, type Overrides, type ExtraProduct } from './utils/overrides';
+import { migrateOverrideImages } from './utils/imageMigration';
 import { taisPhotoUrl, taisDetailUrl } from './utils/tais';
 import { suggestAlternatives } from './utils/alternatives';
 import { supabaseEnabled, saveCatalogToSupabase, loadCatalogFromSupabase, loadCatalogProducts, saveSetting, loadSetting, loadAllSettings, listOverrideBackups } from './lib/supabase';
@@ -1095,10 +1096,18 @@ export default function App() {
     if (isEmptyOverrides(next)) return;
     clearTimeout(syncTimer.current);
     setSyncStatus('syncing');
-    // 即時同期（debounceなし）でSupabaseに保存（最新タイムスタンプを必ず付ける）
-    void saveSetting('overrides', { ...next, _savedAt: Date.now() })
-      .then(() => { setSyncStatus('done'); setTimeout(() => setSyncStatus('idle'), 3000); })
-      .catch(() => setSyncStatus('error'));
+    void (async () => {
+      // Base64画像をStorageへアップロードしURLに差し替えてから同期（クラウド側のデータ量を削減）
+      const migrated = await migrateOverrideImages(next);
+      if (migrated !== next) {
+        overridesRef.current = migrated;
+        saveOverrides(migrated);
+        setOverrides(migrated);
+      }
+      const ok = await saveSetting('overrides', { ...migrated, _savedAt: Date.now() });
+      setSyncStatus(ok ? 'done' : 'error');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    })();
   };
 
   const handleOverride = (update: (o: Overrides) => Overrides) => {
@@ -1132,12 +1141,20 @@ export default function App() {
     setOverrides(latest);
     editSnapshotRef.current = latest;
     setEditMode(false);
-    // Supabase には必ず最新タイムスタンプを付けて同期する。
-    // localStorage が容量超過で保存できなかった場合でも、リロード時に
-    // mergeOverrides が Supabase 側を新しいと判定してデータを復元できる。
-    const payload = { ...latest, _savedAt: Date.now() };
     setSyncStatus('syncing');
     void (async () => {
+      // Base64画像をStorageへアップロードしURLに差し替え（クラウド・ローカル双方のデータ量を削減）
+      const migrated = await migrateOverrideImages(latest);
+      if (migrated !== latest) {
+        overridesRef.current = migrated;
+        editSnapshotRef.current = migrated;
+        saveOverrides(migrated);
+        setOverrides(migrated);
+      }
+      // Supabase には必ず最新タイムスタンプを付けて同期する。
+      // localStorage が容量超過で保存できなかった場合でも、リロード時に
+      // mergeOverrides が Supabase 側を新しいと判定してデータを復元できる。
+      const payload = { ...migrated, _savedAt: Date.now() };
       // 空データでクラウドを上書きしない（誤消去防止。意図的な全消去はサポートに相談）
       const skipCloud = isEmptyOverrides(payload);
       const cloudOk = supabaseEnabled && !skipCloud ? await saveSetting('overrides', payload) : false;
